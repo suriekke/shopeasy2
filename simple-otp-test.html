@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopEasy OTP Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #ff5252;
+        }
+        .otp-display {
+            background: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .success {
+            background: #27ae60;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #e74c3c;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 ShopEasy OTP Test</h1>
+        
+        <div class="step">
+            <h3>Step 1: Enter Phone Number</h3>
+            <input type="tel" id="phone" placeholder="Enter 10-digit phone number" maxlength="10">
+            <button onclick="generateOTP()">📱 Generate OTP</button>
+        </div>
+
+        <div class="step" id="otpStep" style="display: none;">
+            <h3>Step 2: Enter OTP</h3>
+            <div class="otp-display" id="otpDisplay"></div>
+            <input type="text" id="otpInput" placeholder="Enter 4-digit OTP" maxlength="4">
+            <button onclick="verifyOTP()">🔐 Verify OTP</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let currentOTP = '';
+        let currentPhone = '';
+
+        function generateOTP() {
+            const phone = document.getElementById('phone').value;
+            if (phone.length !== 10) {
+                showResult('Please enter a valid 10-digit phone number', 'error');
+                return;
+            }
+
+            currentPhone = phone;
+            currentOTP = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            document.getElementById('otpDisplay').textContent = `Your OTP: ${currentOTP}`;
+            document.getElementById('otpStep').style.display = 'block';
+            document.getElementById('result').innerHTML = '';
+            
+            showResult(`OTP generated for ${phone}`, 'success');
+        }
+
+        function verifyOTP() {
+            const enteredOTP = document.getElementById('otpInput').value;
+            
+            if (enteredOTP === currentOTP) {
+                showResult(`✅ Login successful! Welcome User_${currentPhone.slice(-4)}`, 'success');
+                // Reset for next test
+                setTimeout(() => {
+                    document.getElementById('otpStep').style.display = 'none';
+                    document.getElementById('phone').value = '';
+                    document.getElementById('otpInput').value = '';
+                    document.getElementById('result').innerHTML = '';
+                }, 3000);
+            } else {
+                showResult('❌ Invalid OTP. Please try again.', 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('phone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') generateOTP();
+        });
+
+        document.getElementById('otpInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyOTP();
+        });
+    </script>
+</body>
+</html>
+

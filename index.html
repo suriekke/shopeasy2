@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopEasy Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="flex items-center justify-center min-h-screen">
+            <div class="max-w-md w-full space-y-8 p-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-gray-900">ShopEasy Admin Portal</h2>
+                    <p class="mt-2 text-gray-600">Sign in to access admin dashboard</p>
+                </div>
+                
+                <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
+                    <form id="loginForm" class="space-y-6">
+                        <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                        </div>
+                        
+                        <div>
+                            <button type="submit" id="loginBtn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500">
+                                Sign In
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-6 text-center">
+                        <p class="text-xs text-gray-500">Only users with admin role can access this portal</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboardScreen" class="hidden min-h-screen">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div>
+                        <h1 class="text-xl font-semibold text-gray-800">ShopEasy Admin Portal</h1>
+                        <p class="text-sm text-gray-600">Welcome back, <span id="adminName">Admin</span>!</p>
+                    </div>
+                    <button id="logoutBtn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="p-6">
+                <div class="max-w-7xl mx-auto">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-500 text-white">
+                                    <span class="text-2xl">💰</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Total Revenue</p>
+                                    <p class="text-2xl font-semibold text-gray-900">₹0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-500 text-white">
+                                    <span class="text-2xl">👥</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Active Users</p>
+                                    <p class="text-2xl font-semibold text-gray-900">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-purple-500 text-white">
+                                    <span class="text-2xl">📦</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Total Products</p>
+                                    <p class="text-2xl font-semibold text-gray-900">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-yellow-500 text-white">
+                                    <span class="text-2xl">⏳</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600">Pending Orders</p>
+                                    <p class="text-2xl font-semibold text-gray-900">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <div class="text-2xl mb-2">📦</div>
+                                <h3 class="font-medium text-gray-900">Manage Products</h3>
+                                <p class="text-sm text-gray-600">Add, edit, or remove products</p>
+                            </button>
+                            
+                            <button class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <div class="text-2xl mb-2">🛒</div>
+                                <h3 class="font-medium text-gray-900">View Orders</h3>
+                                <p class="text-sm text-gray-600">Track and manage orders</p>
+                            </button>
+                            
+                            <button class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left">
+                                <div class="text-2xl mb-2">📈</div>
+                                <h3 class="font-medium text-gray-900">Analytics</h3>
+                                <p class="text-sm text-gray-600">View business insights</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

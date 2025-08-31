@@ -1,0 +1,16 @@
+{
+  "name": "shopeasy-admin",
+  "version": "1.0.0",
+  "description": "ShopEasy Admin Portal",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx http-server -p 3001 -o",
+    "build": "echo 'Admin portal ready'"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

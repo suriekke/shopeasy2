@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Copy of Copy of ShopEasy",
+  "description": "A modern, responsive e-commerce application for quick grocery and essentials delivery, inspired by the Zepto UI. It features category browsing, a dynamic cart, location services, a streamlined checkout process, and customer support.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
