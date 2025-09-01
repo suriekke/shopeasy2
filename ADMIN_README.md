@@ -293,3 +293,5 @@ This project is licensed under the MIT License.
 
 **ShopEasy Admin Dashboard** - Built with ❤️ for modern e-commerce management
 
+
+

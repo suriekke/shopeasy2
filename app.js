@@ -114,3 +114,5 @@ function hideError() {
 // Password: admin123
 // Then add a document in Firestore: /users/{uid} with {role: 'admin'}
 
+
+

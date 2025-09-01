@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { User } from '../lib/supabase'
-import { Shield, ShieldOff, UserCheck, UserX } from 'lucide-react'
+import { Shield, ShieldOff, UserCheck, UserX, Search, Filter } from 'lucide-react'
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchUsers()
@@ -77,11 +78,15 @@ const Users: React.FC = () => {
   }
 
   const filteredUsers = users.filter(user => {
-    if (filter === 'all') return true
-    if (filter === 'active') return user.is_active
-    if (filter === 'blocked') return !user.is_active
-    if (filter === 'admins') return user.is_admin
-    return true
+    const matchesFilter = filter === 'all' || 
+                         (filter === 'active' && user.is_active) ||
+                         (filter === 'blocked' && !user.is_active) ||
+                         (filter === 'admins' && user.is_admin)
+    
+    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    return matchesFilter && matchesSearch
   })
 
   if (loading) {
@@ -99,32 +104,35 @@ const Users: React.FC = () => {
         <p className="text-gray-600">Manage user accounts and permissions</p>
       </div>
 
-      {/* Filter */}
-      <div className="mb-6">
-        <div className="flex space-x-2">
-          {[
-            { key: 'all', label: 'All Users' },
-            { key: 'active', label: 'Active' },
-            { key: 'blocked', label: 'Blocked' },
-            { key: 'admins', label: 'Admins' },
-          ].map((filterOption) => (
-            <button
-              key={filterOption.key}
-              onClick={() => setFilter(filterOption.key)}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                filter === filterOption.key
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {filterOption.label}
-            </button>
-          ))}
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search users by email or name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="pl-10 pr-8 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+          >
+            <option value="all">All Users</option>
+            <option value="active">Active</option>
+            <option value="blocked">Blocked</option>
+            <option value="admins">Admins</option>
+          </select>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
         <ul className="divide-y divide-gray-200">
           {filteredUsers.map((user) => (
             <li key={user.id}>
@@ -173,7 +181,7 @@ const Users: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => toggleUserStatus(user.id, !user.is_active)}
-                      className={`inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md ${
+                      className={`inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md transition-colors ${
                         user.is_active
                           ? 'text-red-700 bg-red-100 hover:bg-red-200'
                           : 'text-green-700 bg-green-100 hover:bg-green-200'
@@ -183,7 +191,7 @@ const Users: React.FC = () => {
                     </button>
                     <button
                       onClick={() => toggleAdminStatus(user.id, !user.is_admin)}
-                      className={`inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md ${
+                      className={`inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md transition-colors ${
                         user.is_admin
                           ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
                           : 'text-indigo-700 bg-indigo-100 hover:bg-indigo-200'
@@ -204,9 +212,9 @@ const Users: React.FC = () => {
           <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            {filter === 'all' 
-              ? 'No users have been registered yet.'
-              : `No users match the "${filter}" filter.`
+            {searchTerm || filter !== 'all'
+              ? 'Try adjusting your search or filter criteria.'
+              : 'No users have been registered yet.'
             }
           </p>
         </div>

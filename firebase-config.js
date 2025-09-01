@@ -33,3 +33,5 @@ export const envConfig = {
   SUPABASE_ANON_KEY: "your_supabase_anon_key"
 };
 
+
+

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Order } from '../lib/supabase'
-import { Package, Truck, CheckCircle, Clock } from 'lucide-react'
+import { Package, Truck, CheckCircle, Clock, Search, Filter } from 'lucide-react'
 
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchOrders()
@@ -99,9 +100,13 @@ const Orders: React.FC = () => {
     }
   }
 
-  const filteredOrders = orders.filter(order => 
-    statusFilter === 'all' || order.status === statusFilter
-  )
+  const filteredOrders = orders.filter(order => {
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter
+    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.users?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesStatus && matchesSearch
+  })
 
   if (loading) {
     return (
@@ -118,27 +123,36 @@ const Orders: React.FC = () => {
         <p className="text-gray-600">Manage and track customer orders</p>
       </div>
 
-      {/* Status Filter */}
-      <div className="mb-6">
-        <div className="flex space-x-2">
-          {['all', 'pending', 'packed', 'shipped', 'delivered'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                statusFilter === status
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search orders by ID, customer email or name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="pl-10 pr-8 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="packed">Packed</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+          </select>
         </div>
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
         <ul className="divide-y divide-gray-200">
           {filteredOrders.map((order) => (
             <li key={order.id}>
@@ -196,9 +210,9 @@ const Orders: React.FC = () => {
           <Package className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            {statusFilter === 'all' 
-              ? 'Get started by creating some orders.'
-              : `No orders with status "${statusFilter}" found.`
+            {searchTerm || statusFilter !== 'all'
+              ? 'Try adjusting your search or filter criteria.'
+              : 'No orders have been placed yet.'
             }
           </p>
         </div>

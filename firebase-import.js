@@ -230,3 +230,5 @@ if (typeof firebase !== 'undefined') {
   console.log("Go to: https://console.firebase.google.com/project/shopeasy-app-ebbfb/firestore");
 }
 
+
+

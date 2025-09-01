@@ -102,3 +102,5 @@ CREATE INDEX idx_users_is_active ON users(is_active);
 -- Insert sample admin user (replace with your email)
 -- INSERT INTO users (id, email, full_name, is_admin) 
 -- VALUES ('your-user-id', 'admin@example.com', 'Admin User', TRUE);
+
+

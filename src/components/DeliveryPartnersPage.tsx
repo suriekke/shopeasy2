@@ -123,3 +123,5 @@ const DeliveryPartnersPage: React.FC = () => {
 
 export default DeliveryPartnersPage;
 
+
+
