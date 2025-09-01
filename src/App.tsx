@@ -1,23 +1,47 @@
 import React, { useState } from 'react'
-import { Eye, EyeOff, Mail, Lock, User, Phone, Smartphone, Shield, ArrowRight } from 'lucide-react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Eye, EyeOff, Mail, Lock, User, Phone, Smartphone, Shield, ArrowRight, Home, Package, ShoppingCart, Users, Settings, LogOut, Plus, Edit, Trash2, Search, Filter } from 'lucide-react'
 import './App.css'
 
+// Mock data
+const mockProducts = [
+  { id: 1, name: 'iPhone 15 Pro', price: 999, stock: 50, category: 'Electronics' },
+  { id: 2, name: 'MacBook Air', price: 1299, stock: 25, category: 'Electronics' },
+  { id: 3, name: 'Nike Shoes', price: 89, stock: 100, category: 'Fashion' },
+]
+
+const mockOrders = [
+  { id: 1, customer: 'John Doe', total: 999, status: 'Delivered', date: '2024-01-15' },
+  { id: 2, customer: 'Jane Smith', total: 1299, status: 'Processing', date: '2024-01-16' },
+  { id: 3, customer: 'Bob Johnson', total: 89, status: 'Pending', date: '2024-01-17' },
+]
+
+const mockUsers = [
+  { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Customer', status: 'Active' },
+  { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Admin', status: 'Active' },
+  { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'Customer', status: 'Inactive' },
+]
+
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [products, setProducts] = useState(mockProducts)
+  const [orders, setOrders] = useState(mockOrders)
+  const [users, setUsers] = useState(mockUsers)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  
+  // Login states
   const [authMethod, setAuthMethod] = useState<'email' | 'phone' | 'social'>('email')
   const [isLogin, setIsLogin] = useState(true)
-  
-  // Email/Password fields
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  
-  // Phone OTP fields
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone')
-  
-  // Common states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -31,7 +55,9 @@ const App: React.FC = () => {
     try {
       // Simulate authentication
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setSuccess(isLogin ? 'Login successful!' : 'Account created successfully!')
+      setIsAuthenticated(true)
+      setCurrentUser({ name: fullName || email, email })
+      setSuccess('Login successful!')
     } catch (error: any) {
       setError('Authentication failed')
     } finally {
@@ -52,6 +78,8 @@ const App: React.FC = () => {
         setSuccess('OTP sent successfully!')
       } else {
         await new Promise(resolve => setTimeout(resolve, 1000))
+        setIsAuthenticated(true)
+        setCurrentUser({ name: `User ${phone}`, phone })
         setSuccess('Login successful!')
       }
     } catch (error: any) {
@@ -68,12 +96,34 @@ const App: React.FC = () => {
     
     try {
       await new Promise(resolve => setTimeout(resolve, 1000))
+      setIsAuthenticated(true)
+      setCurrentUser({ name: 'Google User', email: 'google@example.com' })
       setSuccess('Google sign-in successful!')
     } catch (error: any) {
       setError('Google sign-in failed')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+    setCurrentUser(null)
+    setActiveTab('dashboard')
+  }
+
+  const addProduct = (product: any) => {
+    setProducts([...products, { ...product, id: products.length + 1 }])
+    setShowAddModal(false)
+  }
+
+  const editProduct = (product: any) => {
+    setProducts(products.map(p => p.id === product.id ? product : p))
+    setEditingItem(null)
+  }
+
+  const deleteProduct = (id: number) => {
+    setProducts(products.filter(p => p.id !== id))
   }
 
   const resetForm = () => {
@@ -91,6 +141,308 @@ const App: React.FC = () => {
   const handleMethodChange = (method: 'email' | 'phone' | 'social') => {
     setAuthMethod(method)
     resetForm()
+  }
+
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center">
+                <h1 className="text-2xl font-bold text-gray-900">🛍️ ShopEasy Admin</h1>
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600">Welcome, {currentUser?.name}</span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex">
+          {/* Sidebar */}
+          <aside className="w-64 bg-white shadow-sm min-h-screen">
+            <nav className="mt-8">
+              <div className="px-4 space-y-2">
+                {[
+                  { id: 'dashboard', name: 'Dashboard', icon: Home },
+                  { id: 'products', name: 'Products', icon: Package },
+                  { id: 'orders', name: 'Orders', icon: ShoppingCart },
+                  { id: 'users', name: 'Users', icon: Users },
+                  { id: 'settings', name: 'Settings', icon: Settings },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg transition-colors ${
+                      activeTab === item.id
+                        ? 'bg-pink-50 text-pink-700 border-r-2 border-pink-500'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-medium">{item.name}</span>
+                  </button>
+                ))}
+              </div>
+            </nav>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 p-8">
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
+                
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Package className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Products</p>
+                        <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <ShoppingCart className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Users className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Users</p>
+                        <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <span className="text-2xl">💰</span>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Revenue</p>
+                        <p className="text-2xl font-bold text-gray-900">${orders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="px-6 py-4 border-b">
+                    <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      {orders.slice(0, 5).map((order) => (
+                        <div key={order.id} className="flex items-center justify-between py-3 border-b last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{order.customer}</p>
+                            <p className="text-sm text-gray-600">Order #{order.id}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-gray-900">${order.total}</p>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
+                              order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'products' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-gray-900">Products</h2>
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Product</span>
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      {products.map((product) => (
+                        <div key={product.id} className="flex items-center justify-between py-4 border-b last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-600">{product.category}</p>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <span className="text-gray-900">${product.price}</span>
+                            <span className="text-sm text-gray-600">Stock: {product.stock}</span>
+                            <button
+                              onClick={() => setEditingItem(product)}
+                              className="p-2 text-gray-400 hover:text-gray-600"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteProduct(product.id)}
+                              className="p-2 text-red-400 hover:text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'orders' && (
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold text-gray-900">Orders</h2>
+                
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div key={order.id} className="flex items-center justify-between py-4 border-b last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{order.customer}</p>
+                            <p className="text-sm text-gray-600">Order #{order.id} • {order.date}</p>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <span className="font-medium text-gray-900">${order.total}</span>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
+                              order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'users' && (
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold text-gray-900">Users</h2>
+                
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      {users.map((user) => (
+                        <div key={user.id} className="flex items-center justify-between py-4 border-b last:border-b-0">
+                          <div>
+                            <p className="font-medium text-gray-900">{user.name}</p>
+                            <p className="text-sm text-gray-600">{user.email}</p>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              user.role === 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {user.role}
+                            </span>
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {user.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold text-gray-900">Settings</h2>
+                
+                <div className="bg-white rounded-lg shadow-sm border">
+                  <div className="p-6 space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">General Settings</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
+                          <input
+                            type="text"
+                            defaultValue="ShopEasy"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                          <input
+                            type="email"
+                            defaultValue="admin@shopeasy.com"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                          <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <option>USD ($)</option>
+                            <option>EUR (€)</option>
+                            <option>GBP (£)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-6 border-t">
+                      <button className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors">
+                        Save Settings
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    )
   }
 
   return (
