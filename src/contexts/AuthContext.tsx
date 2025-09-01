@@ -200,9 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
     } else {
-      const result = await signInWithEmailAndPassword(auth, email, password)
+      await signInWithEmailAndPassword(auth, email, password)
       // User will be set by the auth state listener
-      return result
     }
   }
 
@@ -236,7 +235,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           currency: 'INR'
         }
       })
-      return result
     }
   }
 
@@ -320,8 +318,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error
     } else {
       const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(auth, provider)
-      return result
+      await signInWithPopup(auth, provider)
     }
   }
 
