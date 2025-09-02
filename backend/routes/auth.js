@@ -1,125 +1,162 @@
-import express from "express";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-import { dbService, supabase } from "../supabaseClient.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env file from the correct path
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
 
 const router = express.Router();
 
-// Simple OTP storage (in production, use Redis or database)
-let otpStore = {};
+// Initialize Supabase client
+const config = require('../config');
+const supabase = createClient(config.supabase.url, config.supabase.anonKey);
 
-// Send OTP - Simple local generation
-router.post("/send-otp", async (req, res) => {
-  const { phone } = req.body;
-  if (!phone) return res.status(400).json({ success: false, message: "Phone required" });
-
+// POST /api/auth/login - User login with phone number
+router.post('/login', async (req, res) => {
   try {
-    // Generate a simple 4-digit OTP
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    otpStore[phone] = otp;
-    
-    console.log(`📱 OTP for ${phone}: ${otp}`);
-    console.log(`📱 Current OTPs in store:`, Object.keys(otpStore));
-    
-    res.json({ 
-      success: true, 
-      message: "OTP sent successfully",
-      otp: otp // Only for development - remove in production
-    });
-  } catch (error) {
-    console.error("❌ OTP generation failed:", error.message);
-    res.status(500).json({ success: false, message: "Failed to generate OTP" });
-  }
-});
+    const { phone_number } = req.body;
 
-// Verify OTP - Simple local verification
-router.post("/verify-otp", async (req, res) => {
-  const { phone, code } = req.body;
-  if (!phone || !code) return res.status(400).json({ success: false, message: "Phone and code required" });
+    if (!phone_number) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
 
-  try {
-    console.log(`🔐 Verifying OTP for ${phone}: ${code}`);
-    console.log(`🔐 Stored OTP for ${phone}: ${otpStore[phone]}`);
-    
-    const correctOtp = otpStore[phone];
-    if (correctOtp && correctOtp === code) {
-      // OTP is correct - remove it from store
-      delete otpStore[phone];
-      console.log(`✅ OTP verified successfully for ${phone}`);
+    // Check if user exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('phone_number', phone_number)
+      .single();
 
-      // Check if user exists in database
-      let user = await dbService.getUserByPhone(phone);
-      
-      if (!user) {
-        // Create new user in database
-        const newUserData = {
-          phone,
-          name: `User_${phone.slice(-4)}`,
-          is_verified: true
-        };
-        user = await dbService.createUser(newUserData);
-        console.log(`👤 New user created in database: ${phone}`);
-      } else {
-        // Update user login time
-        await dbService.updateUserLogin(phone);
-        console.log(`👤 Existing user logged in: ${phone}`);
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Check User Error:', checkError);
+      return res.status(500).json({ error: checkError.message });
+    }
+
+    if (existingUser) {
+      // User exists, return user data
+      res.json({
+        success: true,
+        data: existingUser,
+        message: 'Login successful'
+      });
+    } else {
+      // Create new user
+      const { data: newUser, error: createError } = await supabase
+        .from('user_profiles')
+        .insert([{ phone_number }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Create User Error:', createError);
+        return res.status(500).json({ error: createError.message });
       }
 
-      return res.json({ success: true, user });
-    } else {
-      console.log(`❌ Invalid OTP for ${phone}: ${code}`);
-      return res.json({ success: false, message: "Invalid OTP" });
+      res.status(201).json({
+        success: true,
+        data: newUser,
+        message: 'User created successfully'
+      });
     }
+
   } catch (error) {
-    console.error("❌ Verification failed:", error.message);
-    res.status(500).json({ success: false, message: "Verification failed" });
+    console.error('Login Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get user statistics
-router.get("/stats", async (req, res) => {
+// GET /api/auth/profile/:id - Get user profile
+router.get('/profile/:id', async (req, res) => {
   try {
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('id, is_active, created_at');
-    
-    if (error) throw error;
-    
-    const totalUsers = users.length;
-    const activeUsers = users.filter(user => user.is_active).length;
-    
-    res.json({ 
-      success: true, 
-      stats: { totalUsers, activeUsers }
-    });
-  } catch (error) {
-    console.error("❌ Error getting stats:", error);
-    res.status(500).json({ success: false, message: "Error getting statistics" });
-  }
-});
+    const { id } = req.params;
 
-// Get all users (for admin purposes)
-router.get("/users", async (req, res) => {
-  try {
-    const { data: users, error } = await supabase
-      .from('users')
+    const { data, error } = await supabase
+      .from('user_profiles')
       .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    res.json({ success: true, users });
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Get Profile Error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      data: data
+    });
+
   } catch (error) {
-    console.error("❌ Error getting users:", error);
-    res.status(500).json({ success: false, message: "Error getting users" });
+    console.error('Get Profile Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-export default router;
+// PUT /api/auth/profile/:id - Update user profile
+router.put('/profile/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updateData)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('Update Profile Error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      data: data[0],
+      message: 'Profile updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update Profile Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/auth/orders/:user_id - Get user orders
+router.get('/orders/:user_id', async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items(
+          *,
+          products(*)
+        )
+      `)
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Get Orders Error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({
+      success: true,
+      data: data,
+      count: data.length
+    });
+
+  } catch (error) {
+    console.error('Get Orders Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;

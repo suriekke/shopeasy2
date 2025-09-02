@@ -1,743 +1,579 @@
-import React, { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, User, Phone, Smartphone, Shield, ArrowRight, Home, Package, ShoppingCart, Users, Settings, LogOut, Plus, Edit, Trash2, Search, Filter } from 'lucide-react'
-import './App.css'
+import React, { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
+import { MapPin, Search, ShoppingCart, User, Phone, ArrowRight, Star, Heart, Minus, Plus } from 'lucide-react'
 
-// Mock data
-const mockProducts = [
-  { id: 1, name: 'iPhone 15 Pro', price: 999, stock: 50, category: 'Electronics' },
-  { id: 2, name: 'MacBook Air', price: 1299, stock: 25, category: 'Electronics' },
-  { id: 3, name: 'Nike Shoes', price: 89, stock: 100, category: 'Fashion' },
-]
+interface Product {
+  id: string
+  name: string
+  description: string
+  short_description?: string
+  price: number
+  original_price: number
+  image_url: string
+  unit: string
+  discount_percentage: number
+  is_featured: boolean
+  category_id: string
+  brand?: string
+  average_rating?: number
+  review_count?: number
+}
 
-const mockOrders = [
-  { id: 1, customer: 'John Doe', total: 999, status: 'Delivered', date: '2024-01-15' },
-  { id: 2, customer: 'Jane Smith', total: 1299, status: 'Processing', date: '2024-01-16' },
-  { id: 3, customer: 'Bob Johnson', total: 89, status: 'Pending', date: '2024-01-17' },
-]
+interface Category {
+  id: string
+  name: string
+  description: string
+  icon: string
+  image_url: string
+  sort_order: number
+}
 
-const mockUsers = [
-  { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Customer', status: 'Active' },
-  { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Admin', status: 'Active' },
-  { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'Customer', status: 'Inactive' },
-]
-
-const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [products, setProducts] = useState(mockProducts)
-  const [orders, setOrders] = useState(mockOrders)
-  const [users, setUsers] = useState(mockUsers)
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [editingItem, setEditingItem] = useState<any>(null)
-  
-  // Login states
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | 'social'>('email')
-  const [isLogin, setIsLogin] = useState(true)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+function App() {
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
-  const [otpStep, setOtpStep] = useState<'phone' | 'otp'>('phone')
+  const [showOtpInput, setShowOtpInput] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [cart, setCart] = useState<{ [key: string]: number }>({})
+  const [showCart, setShowCart] = useState(false)
+  const [location, setLocation] = useState('Deliver to: Home')
+  const [showLocationModal, setShowLocationModal] = useState(false)
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false)
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
+  // Fetch products and categories on component mount
+  useEffect(() => {
+    fetchProducts()
+    fetchCategories()
+  }, [])
 
+  const fetchProducts = async () => {
     try {
-      // Simulate authentication
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setIsAuthenticated(true)
-      setCurrentUser({ name: fullName || email, email })
-      setSuccess('Login successful!')
-    } catch (error: any) {
-      setError('Authentication failed')
-    } finally {
-      setLoading(false)
-    }
-  }
+      console.log('Fetching products from Supabase...')
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name, icon),
+          product_reviews(rating, review_text)
+        `)
+        .order('created_at', { ascending: false })
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      if (otpStep === 'phone') {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setOtpStep('otp')
-        setSuccess('OTP sent successfully!')
+      if (error) {
+        console.error('Supabase Error fetching products:', error)
+        throw new Error('Error fetching products: ' + error.message)
       } else {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        setIsAuthenticated(true)
-        setCurrentUser({ name: `User ${phone}`, phone })
-        setSuccess('Login successful!')
+        console.log('Products fetched successfully:', data)
+        console.log('Number of products:', data?.length || 0)
+        if (data && data.length > 0) {
+          console.log('First product:', data[0])
+        }
+        
+        // Calculate average ratings
+        const productsWithRatings = data.map(product => {
+          const reviews = product.product_reviews || []
+          const averageRating = reviews.length > 0 
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+            : 0
+          
+          return {
+            ...product,
+            average_rating: Math.round(averageRating * 10) / 10,
+            review_count: reviews.length
+          }
+        })
+        
+        setProducts(productsWithRatings || [])
       }
-    } catch (error: any) {
-      setError('Authentication failed')
-    } finally {
-      setLoading(false)
+    } catch (error) {
+      console.error('Exception fetching products:', error)
+      alert('Exception fetching products: ' + error.message)
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true)
-    setError('')
-    setSuccess('')
-    
+  const fetchCategories = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setIsAuthenticated(true)
-      setCurrentUser({ name: 'Google User', email: 'google@example.com' })
-      setSuccess('Google sign-in successful!')
-    } catch (error: any) {
-      setError('Google sign-in failed')
+      console.log('Fetching categories from Supabase...')
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+
+      if (error) {
+        console.error('Supabase Error fetching categories:', error)
+        throw new Error('Error fetching categories: ' + error.message)
+      } else {
+        console.log('Categories fetched successfully:', data)
+        console.log('Number of categories:', data?.length || 0)
+        if (data && data.length > 0) {
+          console.log('First category:', data[0])
+        }
+        setCategories(data || [])
+      }
+    } catch (error) {
+      console.error('Exception fetching categories:', error)
+      alert('Exception fetching categories: ' + error.message)
+    }
+  }
+
+  const sendOTP = async () => {
+    if (!phone || phone.length < 10) {
+      alert('Please enter a valid phone number')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: `+91${phone}` }),
+      })
+
+      if (response.ok) {
+        setShowOtpInput(true)
+        alert('OTP sent successfully!')
+      } else {
+        alert('Failed to send OTP')
+      }
+    } catch (error) {
+      console.error('Error sending OTP:', error)
+      alert('Failed to send OTP')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleLogout = () => {
-    setIsAuthenticated(false)
-    setCurrentUser(null)
-    setActiveTab('dashboard')
+  const verifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      alert('Please enter a valid 6-digit OTP')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: `+91${phone}`, otp }),
+      })
+
+      if (response.ok) {
+        setIsLoggedIn(true)
+        alert('Login successful!')
+      } else {
+        alert('Invalid OTP')
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error)
+      alert('Failed to verify OTP')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const addProduct = (product: any) => {
-    setProducts([...products, { ...product, id: products.length + 1 }])
-    setShowAddModal(false)
+  const addToCart = (productId: string) => {
+    setCart(prev => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1
+    }))
   }
 
-  const editProduct = (product: any) => {
-    setProducts(products.map(p => p.id === product.id ? product : p))
-    setEditingItem(null)
+  const removeFromCart = (productId: string) => {
+    setCart(prev => {
+      const newCart = { ...prev }
+      if (newCart[productId] > 1) {
+        newCart[productId] -= 1
+      } else {
+        delete newCart[productId]
+      }
+      return newCart
+    })
   }
 
-  const deleteProduct = (id: number) => {
-    setProducts(products.filter(p => p.id !== id))
+  const getCartTotal = () => {
+    return Object.entries(cart).reduce((total, [productId, quantity]) => {
+      const product = products.find(p => p.id === productId)
+      return total + (product ? product.price * quantity : 0)
+    }, 0)
   }
 
-  const resetForm = () => {
-    setEmail('')
-    setPassword('')
-    setFullName('')
-    setPhone('')
-    setOtp('')
-    setOtpStep('phone')
-    setError('')
-    setSuccess('')
-    setShowPassword(false)
+  const getCartItemCount = () => {
+    return Object.values(cart).reduce((total, quantity) => total + quantity, 0)
   }
 
-  const handleMethodChange = (method: 'email' | 'phone' | 'social') => {
-    setAuthMethod(method)
-    resetForm()
-  }
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory = !selectedCategory || product.category_id === selectedCategory
+    return matchesSearch && matchesCategory
+  })
 
-  if (isAuthenticated) {
+  if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div className="flex items-center">
-                <h1 className="text-2xl font-bold text-gray-900">🛍️ ShopEasy Admin</h1>
-              </div>
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">Welcome, {currentUser?.name}</span>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-green-600 mb-2">ShopEasy</h1>
+            <p className="text-gray-600">Login with your phone number</p>
           </div>
-        </header>
 
-        <div className="flex">
-          {/* Sidebar */}
-          <aside className="w-64 bg-white shadow-sm min-h-screen">
-            <nav className="mt-8">
-              <div className="px-4 space-y-2">
-                {[
-                  { id: 'dashboard', name: 'Dashboard', icon: Home },
-                  { id: 'products', name: 'Products', icon: Package },
-                  { id: 'orders', name: 'Orders', icon: ShoppingCart },
-                  { id: 'users', name: 'Users', icon: Users },
-                  { id: 'settings', name: 'Settings', icon: Settings },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-pink-50 text-pink-700 border-r-2 border-pink-500'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </button>
-                ))}
-              </div>
-            </nav>
-          </aside>
-
-          {/* Main Content */}
-          <main className="flex-1 p-8">
-            {activeTab === 'dashboard' && (
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-                
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Package className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Total Products</p>
-                        <p className="text-2xl font-bold text-gray-900">{products.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <ShoppingCart className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                        <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Users className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Total Users</p>
-                        <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-yellow-100 rounded-lg">
-                        <span className="text-2xl">💰</span>
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Revenue</p>
-                        <p className="text-2xl font-bold text-gray-900">${orders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <div className="px-6 py-4 border-b">
-                    <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
-                  </div>
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      {orders.slice(0, 5).map((order) => (
-                        <div key={order.id} className="flex items-center justify-between py-3 border-b last:border-b-0">
-                          <div>
-                            <p className="font-medium text-gray-900">{order.customer}</p>
-                            <p className="text-sm text-gray-600">Order #{order.id}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium text-gray-900">${order.total}</p>
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                              order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {order.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+          {!showOtpInput ? (
+            <div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter your phone number"
+                    className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md focus:ring-green-500 focus:border-green-500 text-sm border border-gray-300"
+                    maxLength={10}
+                  />
                 </div>
               </div>
-            )}
-
-            {activeTab === 'products' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-3xl font-bold text-gray-900">Products</h2>
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Product</span>
-                  </button>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      {products.map((product) => (
-                        <div key={product.id} className="flex items-center justify-between py-4 border-b last:border-b-0">
-                          <div>
-                            <p className="font-medium text-gray-900">{product.name}</p>
-                            <p className="text-sm text-gray-600">{product.category}</p>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <span className="text-gray-900">${product.price}</span>
-                            <span className="text-sm text-gray-600">Stock: {product.stock}</span>
-                            <button
-                              onClick={() => setEditingItem(product)}
-                              className="p-2 text-gray-400 hover:text-gray-600"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteProduct(product.id)}
-                              className="p-2 text-red-400 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              <button
+                onClick={sendOTP}
+                disabled={loading}
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+              >
+                {loading ? 'Sending...' : 'Send OTP'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter OTP
+                </label>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter 6-digit OTP"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 text-sm"
+                  maxLength={6}
+                />
               </div>
-            )}
-
-            {activeTab === 'orders' && (
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-gray-900">Orders</h2>
-                
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      {orders.map((order) => (
-                        <div key={order.id} className="flex items-center justify-between py-4 border-b last:border-b-0">
-                          <div>
-                            <p className="font-medium text-gray-900">{order.customer}</p>
-                            <p className="text-sm text-gray-600">Order #{order.id} • {order.date}</p>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <span className="font-medium text-gray-900">${order.total}</span>
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                              order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {order.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'users' && (
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-gray-900">Users</h2>
-                
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      {users.map((user) => (
-                        <div key={user.id} className="flex items-center justify-between py-4 border-b last:border-b-0">
-                          <div>
-                            <p className="font-medium text-gray-900">{user.name}</p>
-                            <p className="text-sm text-gray-600">{user.email}</p>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              user.role === 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {user.role}
-                            </span>
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {user.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-gray-900">Settings</h2>
-                
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <div className="p-6 space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">General Settings</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
-                          <input
-                            type="text"
-                            defaultValue="ShopEasy"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                          <input
-                            type="email"
-                            defaultValue="admin@shopeasy.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                          <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
-                            <option>USD ($)</option>
-                            <option>EUR (€)</option>
-                            <option>GBP (£)</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-6 border-t">
-                      <button className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors">
-                        Save Settings
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
+              <button
+                onClick={verifyOTP}
+                disabled={loading}
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 mb-2"
+              >
+                {loading ? 'Verifying...' : 'Verify OTP'}
+              </button>
+              <button
+                onClick={() => setShowOtpInput(false)}
+                className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Back
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">🛍️</h1>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            ShopEasy
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {isLogin ? 'Sign in to your account' : 'Create your account'}
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold text-green-600">ShopEasy</h1>
+            </div>
+
+            {/* Location */}
+            <div className="flex-1 max-w-md mx-8">
+              <button
+                onClick={() => setShowLocationModal(true)}
+                className="w-full flex items-center justify-between px-4 py-2 border border-gray-300 rounded-md bg-gray-50 hover:bg-gray-100"
+              >
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-600">{location}</span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="flex-1 max-w-md mx-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search for products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+            </div>
+
+            {/* Cart */}
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative p-2 text-gray-600 hover:text-green-600"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              {getCartItemCount() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {getCartItemCount()}
+                </span>
+              )}
+            </button>
+
+            {/* Account */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                className="p-2 text-gray-600 hover:text-green-600"
+              >
+                <User className="h-6 w-6" />
+              </button>
+              {showAccountDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Orders</a>
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Payments</a>
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Gift Cards</a>
+                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Customer Support</a>
+                  <button
+                    onClick={() => setIsLoggedIn(false)}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Categories */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8 py-4 overflow-x-auto">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+                className={`flex flex-col items-center space-y-2 min-w-max ${
+                  selectedCategory === category.id ? 'text-green-600' : 'text-gray-600'
+                }`}
+              >
+                <div className="text-2xl">{category.icon}</div>
+                <span className="text-xs">{category.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl rounded-2xl sm:px-10 border border-gray-200">
-          
-          {/* Auth Method Tabs */}
-          <div className="mb-6">
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Featured Products */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Products</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {filteredProducts.map((product) => (
+              <div key={product.id} className="bg-white rounded-lg shadow-sm border p-4">
+                <div className="relative mb-4">
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="w-full h-32 object-cover rounded-md"
+                  />
+                  <button className="absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                    <Heart className="h-5 w-5" />
+                  </button>
+                  {product.discount_percentage > 0 && (
+                    <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                      {product.discount_percentage}% OFF
+                    </div>
+                  )}
+                </div>
+                <h3 className="font-medium text-gray-900 mb-1">{product.name}</h3>
+                <p className="text-sm text-gray-500 mb-2">{product.unit}</p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg font-bold text-gray-900">₹{product.price}</span>
+                    {product.original_price > product.price && (
+                      <span className="text-sm text-gray-500 line-through">₹{product.original_price}</span>
+                    )}
+                  </div>
+                                  <div className="flex items-center">
+                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                  <span className="text-sm text-gray-600 ml-1">{product.average_rating || 4.5}</span>
+                  <span className="text-sm text-gray-500 ml-1">({product.review_count || 0})</span>
+                </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    {cart[product.id] ? (
+                      <>
+                        <button
+                          onClick={() => removeFromCart(product.id)}
+                          className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="text-sm font-medium">{cart[product.id]}</span>
+                        <button
+                          onClick={() => addToCart(product.id)}
+                          className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => addToCart(product.id)}
+                        className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 text-sm font-medium"
+                      >
+                        Add to Cart
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* Cart Modal */}
+      {showCart && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Your Cart</h3>
               <button
-                onClick={() => handleMethodChange('email')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                  authMethod === 'email'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                onClick={() => setShowCart(false)}
+                className="text-gray-400 hover:text-gray-600"
               >
-                <Mail className="w-4 h-4" />
-                <span>Email</span>
+                ×
+              </button>
+            </div>
+            {Object.keys(cart).length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+            ) : (
+              <div>
+                {Object.entries(cart).map(([productId, quantity]) => {
+                  const product = products.find(p => p.id === productId)
+                  if (!product) return null
+                  return (
+                    <div key={productId} className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                        <div>
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-gray-500">₹{product.price}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => removeFromCart(productId)}
+                          className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-8 text-center">{quantity}</span>
+                        <button
+                          onClick={() => addToCart(productId)}
+                          className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-bold">Total:</span>
+                    <span className="font-bold">₹{getCartTotal()}</span>
+                  </div>
+                  <button className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700">
+                    Proceed to Checkout
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Location Modal */}
+      {showLocationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Select Location</h3>
+              <button
+                onClick={() => setShowLocationModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setLocation('Deliver to: Home')
+                  setShowLocationModal(false)
+                }}
+                className="w-full text-left p-3 border rounded-md hover:bg-gray-50"
+              >
+                Home
               </button>
               <button
-                onClick={() => handleMethodChange('phone')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                  authMethod === 'phone'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                onClick={() => {
+                  setLocation('Deliver to: Office')
+                  setShowLocationModal(false)
+                }}
+                className="w-full text-left p-3 border rounded-md hover:bg-gray-50"
               >
-                <Phone className="w-4 h-4" />
-                <span>Phone</span>
+                Office
               </button>
               <button
-                onClick={() => handleMethodChange('social')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                  authMethod === 'social'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                onClick={() => {
+                  setLocation('Deliver to: Other')
+                  setShowLocationModal(false)
+                }}
+                className="w-full text-left p-3 border rounded-md hover:bg-gray-50"
               >
-                <Shield className="w-4 h-4" />
-                <span>Social</span>
+                Other
               </button>
             </div>
           </div>
-
-          {/* Error/Success Messages */}
-          {error && (
-            <div className="mb-4 text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 text-green-600 text-sm text-center bg-green-50 p-3 rounded-lg border border-green-200">
-              {success}
-            </div>
-          )}
-
-          {/* Email/Password Form */}
-          {authMethod === 'email' && (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              {!isLogin && (
-                <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="fullName"
-                      name="fullName"
-                      type="text"
-                      required={!isLogin}
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      placeholder="Enter your full name"
-                    />
-                    <User className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email address
-                </label>
-                <div className="relative">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    placeholder="Enter your email"
-                  />
-                  <Mail className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                  <Lock className="absolute right-10 top-2.5 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    {isLogin ? 'Sign in' : 'Sign up'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Phone OTP Form */}
-          {authMethod === 'phone' && (
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
-              {otpStep === 'phone' ? (
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                      placeholder="Enter your phone number"
-                      maxLength={10}
-                    />
-                    <Phone className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    We'll send you a verification code
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 mb-2">
-                      OTP sent to {phone}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setOtpStep('phone')}
-                      className="text-pink-600 text-sm hover:text-pink-700 underline"
-                    >
-                      Change number
-                    </button>
-                  </div>
-                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
-                    Verification Code
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="otp"
-                      name="otp"
-                      type="text"
-                      required
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-center text-lg tracking-widest"
-                      placeholder="Enter OTP"
-                      maxLength={6}
-                    />
-                    <Smartphone className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    {otpStep === 'phone' ? 'Send OTP' : 'Verify OTP'}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Social Login */}
-          {authMethod === 'social' && (
-            <div className="space-y-4">
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    Continue with Google
-                  </>
-                )}
-              </button>
-
-              <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  More social login options coming soon...
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Toggle Login/Signup */}
-          {authMethod !== 'social' && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => {
-                  setIsLogin(!isLogin)
-                  resetForm()
-                }}
-                className="text-pink-600 hover:text-pink-500 text-sm font-medium transition-colors"
-              >
-                {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-              </button>
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }

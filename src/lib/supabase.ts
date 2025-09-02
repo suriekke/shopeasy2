@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://fxrvemzqhoyfbsksrxzo.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4cnZlbXpxaG95ZmJza3NyeHpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTU3NDksImV4cCI6MjA3MjAzMTc0OX0.dVjXTsmLvmSWVzza7EQy06oKTfrGTzR9STFpjLN8ghQ'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -27,13 +27,29 @@ export interface User {
 }
 
 export interface Product {
-  id: number
+  id: string
   name: string
   description: string
   price: number
-  stock: number
-  category: string
-  image_url?: string
+  original_price: number
+  stock_quantity: number
+  category_id: string
+  image_url: string
+  unit: string
+  discount_percentage: number
+  is_featured: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Category {
+  id: string
+  name: string
+  description: string
+  icon: string
+  image_url: string
+  sort_order: number
+  is_active: boolean
   created_at: string
   updated_at: string
 }
