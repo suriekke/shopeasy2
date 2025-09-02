@@ -1,6 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
+import OTPLoginPage from './pages/OTPLoginPage';
+
+interface UserData {
+  phone_number: string;
+  verified: boolean;
+}
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  const handleLoginSuccess = (userData: UserData) => {
+    setUserData(userData);
+    setIsLoggedIn(true);
+  };
+
+  if (!isLoggedIn) {
+    return <OTPLoginPage onSuccess={handleLoginSuccess} />;
+  }
+
+  // Simple dashboard after login
   return (
     <div style={{ 
       padding: '20px', 
@@ -9,10 +28,10 @@ function App() {
       minHeight: '100vh'
     }}>
       <h1 style={{ color: '#333', textAlign: 'center' }}>
-        🎉 Admin Dashboard is Working!
+        🎉 Login Successful!
       </h1>
       <p style={{ textAlign: 'center', color: '#666' }}>
-        If you can see this, the React app is loading correctly.
+        Welcome, {userData?.phone_number}!
       </p>
       <div style={{ 
         margin: '20px auto', 
@@ -22,20 +41,23 @@ function App() {
         maxWidth: '400px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
       }}>
-        <h2>Test Content</h2>
-        <p>This is a test to see if the basic React rendering is working.</p>
+        <h2>Simple Dashboard</h2>
+        <p>This is a basic dashboard after login.</p>
         <button 
           style={{
-            backgroundColor: '#007bff',
+            backgroundColor: '#dc3545',
             color: 'white',
             border: 'none',
             padding: '10px 20px',
             borderRadius: '4px',
             cursor: 'pointer'
           }}
-          onClick={() => alert('Button click works!')}
+          onClick={() => {
+            setIsLoggedIn(false);
+            setUserData(null);
+          }}
         >
-          Test Button
+          Logout
         </button>
       </div>
     </div>
