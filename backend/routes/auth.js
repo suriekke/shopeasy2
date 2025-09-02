@@ -85,7 +85,6 @@ router.post('/verify-otp', async (req, res) => {
           .from('user_profiles')
           .insert([{ 
             phone_number,
-            is_verified: true,
             created_at: new Date().toISOString()
           }])
           .select()
@@ -96,21 +95,8 @@ router.post('/verify-otp', async (req, res) => {
         }
         userData = newUser;
       } else {
-        // User exists, update verification status
-        const { data: updatedUser, error: updateError } = await supabase
-          .from('user_profiles')
-          .update({ 
-            is_verified: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('phone_number', phone_number)
-          .select()
-          .single();
-
-        if (updateError) {
-          throw updateError;
-        }
-        userData = updatedUser;
+        // User exists, just return the user data
+        userData = existingUser;
       }
 
       res.json({
