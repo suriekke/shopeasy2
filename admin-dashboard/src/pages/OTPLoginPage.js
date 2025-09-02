@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Phone, Smartphone } from 'lucide-react';
 
-const OTPLoginPage = ({ onOTPSuccess }) => {
+const OTPLoginPage = ({ onSuccess }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
@@ -66,7 +66,7 @@ const OTPLoginPage = ({ onOTPSuccess }) => {
       if (response.ok) {
         setSuccess('OTP verified successfully!');
         // Call the success callback to authenticate the user
-        onOTPSuccess({ phone_number: phoneNumber, verified: true });
+        onSuccess();
       } else {
         setError(data.error || 'Failed to verify OTP');
       }
