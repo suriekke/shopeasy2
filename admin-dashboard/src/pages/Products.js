@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AddProductForm from '../components/AddProductForm';
 
-const API_BASE_URL = 'https://shopeasy3-8spq2ec94-ekke-suris-projects.vercel.app';
+const API_BASE_URL = 'https://shopeasy-backend-tnkk.onrender.com';
 
 const Products = () => {
   const [products, setProducts] = useState([]);

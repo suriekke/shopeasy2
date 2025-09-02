@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE_URL = 'https://shopeasy3-8spq2ec94-ekke-suris-projects.vercel.app';
+const API_BASE_URL = 'https://shopeasy-backend-tnkk.onrender.com';
 
 const AddProductForm = ({ onProductAdded }) => {
   const [formData, setFormData] = useState({
