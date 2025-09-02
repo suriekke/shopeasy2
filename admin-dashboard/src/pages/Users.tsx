@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Mail, Phone, Calendar, ShoppingBag, Search, Filter } from 'lucide-react';
+import { Users as UsersIcon, Mail, Phone, Calendar, ShoppingBag, Search, Filter } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { usersAPI } from '../lib/api';
@@ -62,8 +62,8 @@ const Users: React.FC = () => {
         bValue = new Date(b.created_at).getTime();
       }
       
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      if (aValue && bValue && aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue && bValue && aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
 
@@ -93,7 +93,7 @@ const Users: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-gray-400" />
+            <UsersIcon className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{users.length}</div>
@@ -104,7 +104,7 @@ const Users: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Active Users</CardTitle>
-            <Users className="h-4 w-4 text-gray-400" />
+            <UsersIcon className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">

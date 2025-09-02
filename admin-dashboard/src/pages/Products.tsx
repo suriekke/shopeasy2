@@ -110,7 +110,7 @@ const Products: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = [...new Set(products.map(p => p.category))];
+  const categories = Array.from(new Set(products.map(p => p.category)));
 
   if (loading) {
     return (
