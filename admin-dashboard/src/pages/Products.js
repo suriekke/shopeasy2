@@ -1,48 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, subscribeToProducts } from '../supabaseClient';
-import { Plus, Edit, Trash2, Upload, Download } from 'lucide-react';
-import Papa from 'papaparse';
+import AddProductForm from '../components/AddProductForm';
+
+const API_BASE_URL = 'https://shopeasy3-8spq2ec94-ekke-suris-projects.vercel.app';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    category: '',
-    stock: '',
-    image_url: '',
-    description: '',
-  });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
     fetchProducts();
-    
-    // Subscribe to real-time changes
-    const subscription = subscribeToProducts((payload) => {
-      if (payload.eventType === 'INSERT') {
-        setProducts(prev => [...prev, payload.new]);
-      } else if (payload.eventType === 'UPDATE') {
-        setProducts(prev => prev.map(p => p.id === payload.new.id ? payload.new : p));
-      } else if (payload.eventType === 'DELETE') {
-        setProducts(prev => prev.filter(p => p.id !== payload.old.id));
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    fetchCategories();
   }, []);
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setProducts(data || []);
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/products`);
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data.products || []);
+      } else {
+        console.error('Failed to fetch products');
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -50,295 +33,261 @@ const Products = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const fetchCategories = async () => {
     try {
-      if (editingProduct) {
-        const { error } = await supabase
-          .from('products')
-          .update(formData)
-          .eq('id', editingProduct.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('products')
-          .insert([formData]);
-
-        if (error) throw error;
+      const response = await fetch(`${API_BASE_URL}/api/categories`);
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || []);
       }
-
-      resetForm();
     } catch (error) {
-      console.error('Error saving product:', error);
+      console.error('Error fetching categories:', error);
     }
   };
 
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      price: product.price,
-      category: product.category,
-      stock: product.stock,
-      image_url: product.image_url,
-      description: product.description,
-    });
-    setShowForm(true);
+  const handleProductAdded = (newProduct) => {
+    setProducts(prev => [newProduct, ...prev]);
+    setShowAddForm(false);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      try {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error deleting product:', error);
-      }
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) {
+      return;
     }
-  };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      price: '',
-      category: '',
-      stock: '',
-      image_url: '',
-      description: '',
-    });
-    setEditingProduct(null);
-    setShowForm(false);
-  };
-
-  const handleCSVImport = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        complete: async (results) => {
-          try {
-            const products = results.data.map(row => ({
-              name: row.name,
-              price: parseFloat(row.price),
-              category: row.category,
-              stock: parseInt(row.stock),
-              image_url: row.image_url,
-              description: row.description,
-            }));
-
-            const { error } = await supabase
-              .from('products')
-              .insert(products);
-
-            if (error) throw error;
-            alert('Products imported successfully!');
-          } catch (error) {
-            console.error('Error importing products:', error);
-            alert('Error importing products');
-          }
-        },
-        error: (error) => {
-          console.error('Error parsing CSV:', error);
-          alert('Error parsing CSV file');
-        }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
+        method: 'DELETE',
       });
+
+      if (response.ok) {
+        setProducts(prev => prev.filter(p => p.id !== productId));
+      } else {
+        alert('Failed to delete product');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Error deleting product');
     }
   };
 
-  const exportCSV = () => {
-    const csv = Papa.unparse(products);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'products.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  if (loading) {
+  if (showAddForm) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div>
+        <div className="mb-6 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
+          <button
+            onClick={() => setShowAddForm(false)}
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+          >
+            ← Back to Products
+          </button>
+        </div>
+        <AddProductForm onProductAdded={handleProductAdded} />
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600">Manage your product catalog</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={exportCSV}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </button>
-          <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
-            <Upload className="h-4 w-4 mr-2" />
-            Import CSV
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleCSVImport}
-              className="hidden"
-            />
-          </label>
-          <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </button>
-        </div>
+      {/* Header */}
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">Products Management</h1>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          + Add Product
+        </button>
       </div>
 
-      {showForm && (
-        <div className="mb-8 bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            {editingProduct ? 'Edit Product' : 'Add New Product'}
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Stock</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Image URL</label>
-                <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                {editingProduct ? 'Update' : 'Create'}
-              </button>
-            </div>
-          </form>
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap gap-4">
+        <div className="flex-1 min-w-64">
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
         </div>
-      )}
+        <div>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Categories</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={fetchProducts}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+        >
+          🔄 Refresh
+        </button>
+      </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {products.map((product) => (
-            <li key={product.id} className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {product.image_url && (
-                    <img
-                      className="h-12 w-12 rounded-lg object-cover"
-                      src={product.image_url}
-                      alt={product.name}
-                    />
-                  )}
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                    <div className="text-sm text-gray-500">{product.category}</div>
-                    <div className="text-sm text-gray-500">Stock: {product.stock}</div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="text-sm font-medium text-gray-900">
-                    ${product.price}
-                  </div>
-                  <button
-                    onClick={() => handleEdit(product)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="text-gray-400 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+      {/* Products Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading products...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <p>No products found. {searchTerm || selectedCategory ? 'Try adjusting your filters.' : 'Add your first product!'}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredProducts.map((product) => {
+                  const category = categories.find(c => c.id === product.category_id);
+                  return (
+                    <tr key={product.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-12 w-12">
+                            <img
+                              className="h-12 w-12 rounded-lg object-cover"
+                              src={product.image_url || '/placeholder.jpg'}
+                              alt={product.name}
+                              onError={(e) => {
+                                e.target.src = '/placeholder.jpg';
+                              }}
+                            />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {product.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {product.description?.substring(0, 60)}...
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {category?.name || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">₹{product.price}</div>
+                        {product.original_price && (
+                          <div className="text-sm text-gray-500 line-through">
+                            ₹{product.original_price}
+                          </div>
+                        )}
+                        {product.discount_percentage > 0 && (
+                          <div className="text-xs text-green-600">
+                            {product.discount_percentage}% OFF
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`text-sm ${
+                          product.stock_quantity > 10 ? 'text-green-600' :
+                          product.stock_quantity > 0 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {product.stock_quantity} {product.unit}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          product.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {product.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        {product.is_featured && (
+                          <span className="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Featured
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-red-600 hover:text-red-900 ml-4"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Summary Stats */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-blue-600">{products.length}</div>
+          <div className="text-sm text-gray-600">Total Products</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-green-600">
+            {products.filter(p => p.is_active).length}
+          </div>
+          <div className="text-sm text-gray-600">Active Products</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-yellow-600">
+            {products.filter(p => p.stock_quantity <= 10 && p.stock_quantity > 0).length}
+          </div>
+          <div className="text-sm text-gray-600">Low Stock</div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="text-2xl font-bold text-red-600">
+            {products.filter(p => p.stock_quantity === 0).length}
+          </div>
+          <div className="text-sm text-gray-600">Out of Stock</div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default Products;
-
-
-
-

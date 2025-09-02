@@ -52,42 +52,25 @@ function App() {
 
   const fetchProducts = async () => {
     try {
-      console.log('Fetching products from Supabase...')
+      console.log('Fetching products from backend API...')
       
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name, icon),
-          product_reviews(rating, review_text)
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Supabase Error fetching products:', error)
-        throw new Error('Error fetching products: ' + error.message)
-      } else {
-        console.log('Products fetched successfully:', data)
-        console.log('Number of products:', data?.length || 0)
-        if (data && data.length > 0) {
-          console.log('First product:', data[0])
+      const response = await fetch('http://localhost:5000/api/products?featured=true&limit=50')
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('Products fetched successfully:', result.data)
+        console.log('Number of products:', result.data?.length || 0)
+        if (result.data && result.data.length > 0) {
+          console.log('First product:', result.data[0])
         }
-        
-        // Calculate average ratings
-        const productsWithRatings = data.map(product => {
-          const reviews = product.product_reviews || []
-          const averageRating = reviews.length > 0 
-            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
-            : 0
-          
-          return {
-            ...product,
-            average_rating: Math.round(averageRating * 10) / 10,
-            review_count: reviews.length
-          }
-        })
-        
-        setProducts(productsWithRatings || [])
+        setProducts(result.data || [])
+      } else {
+        throw new Error(result.error || 'Failed to fetch products')
       }
     } catch (error) {
       console.error('Exception fetching products:', error)
@@ -97,24 +80,25 @@ function App() {
 
   const fetchCategories = async () => {
     try {
-      console.log('Fetching categories from Supabase...')
+      console.log('Fetching categories from backend API...')
       
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-
-      if (error) {
-        console.error('Supabase Error fetching categories:', error)
-        throw new Error('Error fetching categories: ' + error.message)
-      } else {
-        console.log('Categories fetched successfully:', data)
-        console.log('Number of categories:', data?.length || 0)
-        if (data && data.length > 0) {
-          console.log('First category:', data[0])
+      const response = await fetch('http://localhost:5000/api/categories?active=true')
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('Categories fetched successfully:', result.data)
+        console.log('Number of categories:', result.data?.length || 0)
+        if (result.data && result.data.length > 0) {
+          console.log('First category:', result.data[0])
         }
-        setCategories(data || [])
+        setCategories(result.data || [])
+      } else {
+        throw new Error(result.error || 'Failed to fetch categories')
       }
     } catch (error) {
       console.error('Exception fetching categories:', error)
@@ -182,23 +166,73 @@ function App() {
     }
   }
 
-  const addToCart = (productId: string) => {
-    setCart(prev => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1
-    }))
+  const addToCart = async (productId: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: 'temp-user-id', // Replace with actual user ID when auth is implemented
+          product_id: productId,
+          quantity: 1
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add to cart')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setCart(prev => ({
+          ...prev,
+          [productId]: (prev[productId] || 0) + 1
+        }))
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      alert('Failed to add item to cart')
+    }
   }
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => {
-      const newCart = { ...prev }
-      if (newCart[productId] > 1) {
-        newCart[productId] -= 1
-      } else {
-        delete newCart[productId]
+  const removeFromCart = async (productId: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/cart', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: 'temp-user-id', // Replace with actual user ID when auth is implemented
+          product_id: productId,
+          quantity: (cart[productId] || 1) - 1
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to remove from cart')
       }
-      return newCart
-    })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setCart(prev => {
+          const newCart = { ...prev }
+          if (newCart[productId] > 1) {
+            newCart[productId] -= 1
+          } else {
+            delete newCart[productId]
+          }
+          return newCart
+        })
+      }
+    } catch (error) {
+      console.error('Error removing from cart:', error)
+      alert('Failed to remove item from cart')
+    }
   }
 
   const getCartTotal = () => {

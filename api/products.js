@@ -55,7 +55,6 @@ async function getProducts(req, res) {
       .select(`
         *,
         categories(name, icon),
-        product_details(long_description, specifications, ingredients, allergens, nutritional_info),
         product_reviews(rating, review_text, created_at)
       `)
 
