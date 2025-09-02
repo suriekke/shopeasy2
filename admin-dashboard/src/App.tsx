@@ -8,11 +8,16 @@ import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
+interface UserData {
+  phone_number: string;
+  verified: boolean;
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
-  const handleLoginSuccess = (userData) => {
+  const handleLoginSuccess = (userData: UserData) => {
     setUserData(userData);
     setIsLoggedIn(true);
   };
@@ -38,8 +43,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
