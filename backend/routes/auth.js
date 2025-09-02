@@ -74,6 +74,22 @@ router.post('/send-otp', async (req, res) => {
   }
 });
 
+// GET /api/auth/verify-otp - Test route (for browser testing)
+router.get('/verify-otp', (req, res) => {
+  res.json({ 
+    message: 'Verify OTP endpoint is working!',
+    method: 'POST',
+    body_format: { 
+      phone_number: "string",
+      otp: "string"
+    },
+    example: { 
+      phone_number: "+918179688221",
+      otp: "123456"
+    }
+  });
+});
+
 // POST /api/auth/verify-otp - Verify OTP
 router.post('/verify-otp', async (req, res) => {
   try {
