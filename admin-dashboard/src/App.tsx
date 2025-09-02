@@ -1,55 +1,44 @@
-import React, { useState, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import OTPLoginPage from './pages/OTPLoginPage';
-import Layout from './components/Layout';
-
-// Lazy load components to prevent premature API calls
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Products = lazy(() => import('./pages/Products'));
-const Orders = lazy(() => import('./pages/Orders'));
-const Users = lazy(() => import('./pages/Users'));
-const Settings = lazy(() => import('./pages/Settings'));
-
-interface UserData {
-  phone_number: string;
-  verified: boolean;
-}
+import React from 'react';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState<UserData | null>(null);
-
-  const handleLoginSuccess = (userData: UserData) => {
-    setUserData(userData);
-    setIsLoggedIn(true);
-  };
-
-  if (!isLoggedIn) {
-    return <OTPLoginPage onSuccess={handleLoginSuccess} />;
-  }
-
   return (
-    <Router>
-      <Layout user={userData}>
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading dashboard...</p>
-            </div>
-          </div>
-        }>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </Suspense>
-      </Layout>
-    </Router>
+    <div style={{ 
+      padding: '20px', 
+      fontFamily: 'Arial, sans-serif',
+      backgroundColor: '#f0f0f0',
+      minHeight: '100vh'
+    }}>
+      <h1 style={{ color: '#333', textAlign: 'center' }}>
+        🎉 Admin Dashboard is Working!
+      </h1>
+      <p style={{ textAlign: 'center', color: '#666' }}>
+        If you can see this, the React app is loading correctly.
+      </p>
+      <div style={{ 
+        margin: '20px auto', 
+        padding: '20px', 
+        backgroundColor: 'white', 
+        borderRadius: '8px',
+        maxWidth: '400px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <h2>Test Content</h2>
+        <p>This is a test to see if the basic React rendering is working.</p>
+        <button 
+          style={{
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          onClick={() => alert('Button click works!')}
+        >
+          Test Button
+        </button>
+      </div>
+    </div>
   );
 }
 
