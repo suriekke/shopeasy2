@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import OTPLoginPage from './pages/OTPLoginPage';
+import Dashboard from './pages/Dashboard';
+import Products from './pages/Products';
+import Orders from './pages/Orders';
+import Users from './pages/Users';
+import Settings from './pages/Settings';
+import Layout from './components/Layout';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState(null);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (userData) => {
+    setUserData(userData);
     setIsLoggedIn(true);
   };
 
@@ -13,25 +22,18 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          🎉 Welcome to ShopEasy Admin Dashboard!
-        </h1>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Dashboard Content</h2>
-          <p className="text-gray-600">
-            You are now logged in! This is the admin dashboard.
-          </p>
-          <button
-            onClick={() => setIsLoggedIn(false)}
-            className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
+    <Router>
+      <Layout user={userData}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </Layout>
+    </Router>
   );
 }
 

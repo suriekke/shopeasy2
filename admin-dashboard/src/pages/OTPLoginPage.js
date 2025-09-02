@@ -66,7 +66,7 @@ const OTPLoginPage = ({ onSuccess }) => {
       if (response.ok) {
         setSuccess('OTP verified successfully!');
         // Call the success callback to authenticate the user
-        onSuccess();
+        onSuccess({ phone_number: phoneNumber, verified: true });
       } else {
         setError(data.error || 'Failed to verify OTP');
       }
