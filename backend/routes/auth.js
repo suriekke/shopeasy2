@@ -29,6 +29,16 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+// GET /api/auth/send-otp - Test route (for browser testing)
+router.get('/send-otp', (req, res) => {
+  res.json({ 
+    message: 'Send OTP endpoint is working!',
+    method: 'POST',
+    body_format: { phone_number: "string" },
+    example: { phone_number: "+918179688221" }
+  });
+});
+
 // POST /api/auth/send-otp - Send OTP to phone number
 router.post('/send-otp', async (req, res) => {
   try {
