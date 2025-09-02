@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://shopeasy-backend-tnkk.onrender.com';
+const API_BASE_URL = 'https://shopeasy-backend.onrender.com';
 
 // Create axios instance with default config
 const api = axios.create({
