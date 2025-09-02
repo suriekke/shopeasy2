@@ -8,6 +8,21 @@ const router = express.Router();
 const config = require('../config');
 const supabase = createClient(config.supabase.url, config.supabase.anonKey);
 
+// GET /api/auth - Root auth route for testing
+router.get('/', (req, res) => {
+  res.json({ 
+    message: 'Auth routes are working!',
+    available_endpoints: [
+      'POST /api/auth/send-otp',
+      'POST /api/auth/verify-otp',
+      'POST /api/auth/login',
+      'GET /api/auth/profile/:id',
+      'PUT /api/auth/profile/:id',
+      'GET /api/auth/orders/:user_id'
+    ]
+  });
+});
+
 // Initialize Twilio client
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
