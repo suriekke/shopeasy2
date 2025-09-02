@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import OTPLoginPage from './pages/OTPLoginPage';
+import Layout from './components/Layout';
+
+// Lazy load components to prevent premature API calls
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Products = lazy(() => import('./pages/Products'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Users = lazy(() => import('./pages/Users'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 interface UserData {
   phone_number: string;
@@ -19,48 +28,28 @@ function App() {
     return <OTPLoginPage onSuccess={handleLoginSuccess} />;
   }
 
-  // Simple dashboard after login
   return (
-    <div style={{ 
-      padding: '20px', 
-      fontFamily: 'Arial, sans-serif',
-      backgroundColor: '#f0f0f0',
-      minHeight: '100vh'
-    }}>
-      <h1 style={{ color: '#333', textAlign: 'center' }}>
-        🎉 Login Successful!
-      </h1>
-      <p style={{ textAlign: 'center', color: '#666' }}>
-        Welcome, {userData?.phone_number}!
-      </p>
-      <div style={{ 
-        margin: '20px auto', 
-        padding: '20px', 
-        backgroundColor: 'white', 
-        borderRadius: '8px',
-        maxWidth: '400px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <h2>Simple Dashboard</h2>
-        <p>This is a basic dashboard after login.</p>
-        <button 
-          style={{
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-          onClick={() => {
-            setIsLoggedIn(false);
-            setUserData(null);
-          }}
-        >
-          Logout
-        </button>
-      </div>
-    </div>
+    <Router>
+      <Layout user={userData}>
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading dashboard...</p>
+            </div>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Suspense>
+      </Layout>
+    </Router>
   );
 }
 
