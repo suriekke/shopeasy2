@@ -98,3 +98,4 @@ console.log('\n🚀 Deployment configuration complete!');
 console.log('📁 render.yaml created in backend/ directory');
 console.log('🌐 Follow the instructions above to deploy on Render');
 console.log('💡 The deployment will start automatically once you create the service');
+

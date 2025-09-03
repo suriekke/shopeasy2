@@ -7,10 +7,27 @@ const config = require('./config');
 const app = express();
 const PORT = config.port;
 
+// CORS Configuration - CRITICAL for frontend-backend communication
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:4173',
+    'https://shopeasy3.vercel.app',
+    'https://shopeasy-customer-app.vercel.app',
+    'https://shopeasy-admin-dashboard.vercel.app',
+    'https://shopeasy-clean.vercel.app',
+    config.frontend.url
+  ].filter(Boolean), // Remove undefined values
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
 // Middleware
 app.use(helmet());
 app.use(morgan('combined'));
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -57,3 +57,4 @@ console.log('- Check your email for GitHub notifications');
 console.log('\n🎯 **Next Steps:**');
 console.log('Choose an option above and let me know which one you prefer!');
 console.log('I\'ll guide you through the specific steps for that method.');
+

@@ -1,0 +1,36 @@
+🚀 SHOPEASY DEPLOYMENT INSTRUCTIONS 🚀
+
+📁 WHAT'S IN THIS FOLDER:
+├── admin-app/          (Upload to shopeasy2 repository)
+└── customer-app/       (Upload to shopeasy3 repository)
+
+🎯 STEP 1: DEPLOY ADMIN APP (shopeasy2)
+1. Go to: https://github.com/suriekke/shopeasy2
+2. Click "Add file" → "Upload files"
+3. Upload ALL files from: admin-app/ folder
+4. Commit message: "Deploy admin dashboard v1.0"
+5. Click "Commit changes"
+
+🎯 STEP 2: DEPLOY CUSTOMER APP (shopeasy3)
+1. Go to: https://github.com/suriekke/shopeasy3
+2. Click "Add file" → "Upload files"
+3. Upload ALL files from: customer-app/ folder
+4. Commit message: "Deploy customer app v1.0"
+5. Click "Commit changes"
+
+⏱️ TIMELINE:
+- GitHub upload: 2-3 minutes per app
+- Vercel deployment: 2-5 minutes per app
+- Total time: 10-15 minutes
+
+🔗 AFTER DEPLOYMENT:
+- Admin Dashboard: https://shopeasy2.vercel.app
+- Customer App: https://shopeasy3.vercel.app
+
+📊 CHECK PROGRESS:
+- Go to: https://vercel.com/dashboard
+
+---
+🎉 YOU'RE READY TO DEPLOY! 🎉
+
+

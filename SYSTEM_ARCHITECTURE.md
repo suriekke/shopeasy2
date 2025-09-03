@@ -351,3 +351,4 @@ Testing Strategy:
 ---
 
 *This architecture ensures ShopEasy can deliver on its 10-minute delivery promise while maintaining scalability, reliability, and cost-effectiveness.*
+

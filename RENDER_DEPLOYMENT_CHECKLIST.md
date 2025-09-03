@@ -77,3 +77,4 @@ VITE_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 ---
 
 **Ready to deploy? Follow the steps above! 🚀**
+

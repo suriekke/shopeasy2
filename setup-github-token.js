@@ -68,3 +68,4 @@ console.log('4. Then we\'ll deploy to Render automatically!');
 console.log('\n🔐 **Security Note:**');
 console.log('Personal Access Tokens are like passwords - keep them secure!');
 console.log('Never share them or commit them to your code.');
+

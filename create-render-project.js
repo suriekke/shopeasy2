@@ -69,3 +69,4 @@ console.log('   - Upgrade to $7/month for unlimited usage');
 console.log('   - Auto-deploy is enabled for every push to main');
 
 console.log('\n🚀 Ready to deploy! Follow the steps above to create your Render project.');
+

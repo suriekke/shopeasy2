@@ -1,6 +1,7 @@
 # ShopEasy - Complete Authentication System
 
 A modern e-commerce application with comprehensive authentication system supporting multiple providers (Firebase and Supabase) and authentication methods.
+<!-- Updated for Render deployment fix -->
 
 ## Features
 

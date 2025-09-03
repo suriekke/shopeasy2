@@ -7,7 +7,7 @@
 
 const https = require('https');
 
-const BACKEND_URL = 'https://shopeasy-backend-tnkk.onrender.com';
+const BACKEND_URL = 'https://shopeasy-customer.onrender.com';
 
 // Test function
 function testEndpoint(url, method = 'GET', data = null) {
