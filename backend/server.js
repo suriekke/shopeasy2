@@ -37,6 +37,20 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/auth', require('./routes/auth'));
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'ShopEasy Backend API is running!',
+    endpoints: {
+      health: '/health',
+      products: '/api/products',
+      categories: '/api/categories',
+      cart: '/api/cart',
+      auth: '/api/auth'
+    }
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'ShopEasy Backend is running' });
