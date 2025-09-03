@@ -54,10 +54,11 @@ app.use('*', (req, res) => {
 });
 
 // Start server for Render deployment
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 ShopEasy Backend running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
+  console.log(`🌍 Server listening on 0.0.0.0:${PORT} (accessible externally)`);
 });
 
 module.exports = app;
