@@ -5,7 +5,7 @@ services:
     plan: starter
     buildCommand: npm install
     startCommand: npm run render-start
-    rootDir: backend
+    rootDir: .
     healthCheckPath: /health
     autoDeploy: true
     # Updated configuration for proper backend deployment
